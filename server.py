@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from flask import Flask,render_template,request,redirect,flash,url_for
 
 
@@ -12,6 +13,27 @@ def loadCompetitions():
     with open('competitions.json') as comps:
          listOfCompetitions = json.load(comps)['competitions']
          return listOfCompetitions
+
+
+def saveClubs(clubs_data):
+    """Sauvegarde les données des clubs dans le fichier JSON"""
+    with open('clubs.json', 'w') as c:
+        json.dump({'clubs': clubs_data}, c, indent=4)
+
+
+def saveCompetitions(competitions_data):
+    """Sauvegarde les données des compétitions dans le fichier JSON"""
+    with open('competitions.json', 'w') as c:
+        json.dump({'competitions': competitions_data}, c, indent=4)
+
+
+def is_competition_past(competition_date):
+    """Vérifie si une compétition est dans le passé"""
+    try:
+        comp_date = datetime.strptime(competition_date, '%Y-%m-%d %H:%M:%S')
+        return comp_date < datetime.now()
+    except ValueError:
+        return False
 
 
 app = Flask(__name__)
@@ -50,13 +72,19 @@ def book(competition,club):
     try:
         foundClub = [c for c in clubs if c['name'] == club][0]
         foundCompetition = [c for c in competitions if c['name'] == competition][0]
+        
+        # Validation que la compétition n'est pas dans le passé
+        if is_competition_past(foundCompetition['date']):
+            flash('❌ ERREUR: Cette compétition est dans le passé!')
+            return render_template('welcome.html', club=foundClub, competitions=competitions)
+        
         if foundClub and foundCompetition:
             return render_template('booking.html',club=foundClub,competition=foundCompetition)
         else:
-            flash("Something went wrong-please try again")
+            flash("❌ ERREUR: Quelque chose s'est mal passé, veuillez réessayer")
             return render_template('welcome.html', club=foundClub, competitions=competitions)
     except IndexError:
-        flash("Club or competition not found")
+        flash("❌ ERREUR: Club ou compétition non trouvé")
         return render_template('index.html')
 
 
@@ -90,9 +118,18 @@ def purchasePlaces():
         flash('❌ ERREUR: Vous ne pouvez pas réserver plus de 12 places!')
         return render_template('welcome.html', club=club, competitions=competitions)
     
+    # Validation que la compétition n'est pas dans le passé
+    if is_competition_past(competition['date']):
+        flash('❌ ERREUR: Vous ne pouvez pas réserver pour des compétitions passées!')
+        return render_template('welcome.html', club=club, competitions=competitions)
+    
     # Mise à jour des données
     competition['numberOfPlaces'] = int(competition['numberOfPlaces']) - placesRequired
     club['points'] = str(int(club['points']) - placesRequired)
+    
+    # Sauvegarde des modifications
+    saveClubs(clubs)
+    saveCompetitions(competitions)
     
     flash('Great-booking complete!')
     return render_template('welcome.html', club=club, competitions=competitions)
