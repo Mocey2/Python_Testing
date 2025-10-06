@@ -82,7 +82,7 @@ def showSummary():
     
     try:
         club = [club for club in clubs if club['email'] == email][0]
-        return render_template('welcome.html',club=club,competitions=competitions)
+        return render_template('welcome.html',club=club,competitions=competitions,is_competition_past=is_competition_past)
     except IndexError:
         flash('❌ ERREUR: Email non trouvé dans notre base de données!')
         return render_template('index.html')
