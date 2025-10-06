@@ -26,11 +26,22 @@ def index():
 
 @app.route('/showSummary',methods=['POST'])
 def showSummary():
+    email = request.form.get('email', '').strip()
+    
+    # Validation de l'email
+    if not email:
+        flash('❌ ERREUR: Veuillez saisir un email!')
+        return render_template('index.html')
+    
+    if '@' not in email or '.' not in email:
+        flash('❌ ERREUR: Format d\'email invalide!')
+        return render_template('index.html')
+    
     try:
-        club = [club for club in clubs if club['email'] == request.form['email']][0]
+        club = [club for club in clubs if club['email'] == email][0]
         return render_template('welcome.html',club=club,competitions=competitions)
     except IndexError:
-        flash("Sorry, that email wasn't found.")
+        flash('❌ ERREUR: Email non trouvé dans notre base de données!')
         return render_template('index.html')
 
 
@@ -51,23 +62,32 @@ def book(competition,club):
 
 @app.route('/purchasePlaces',methods=['POST'])
 def purchasePlaces():
-    competition = [c for c in competitions if c['name'] == request.form['competition']][0]
-    club = [c for c in clubs if c['name'] == request.form['club']][0]
-    placesRequired = int(request.form['places'])
+    try:
+        competition = [c for c in competitions if c['name'] == request.form['competition']][0]
+        club = [c for c in clubs if c['name'] == request.form['club']][0]
+        placesRequired = int(request.form['places'])
+    except (IndexError, ValueError, KeyError):
+        flash("Invalid data provided. Please try again.")
+        return render_template('index.html')
+    
+    # Validation du nombre minimum de places
+    if placesRequired <= 0:
+        flash('❌ ERREUR: Vous devez saisir un nombre de places supérieur à 0!')
+        return render_template('welcome.html', club=club, competitions=competitions)
     
     # Validation des points du club
     if placesRequired > int(club['points']):
-        flash('Not enough points available!')
+        flash('❌ ERREUR: Pas assez de points disponibles!')
         return render_template('welcome.html', club=club, competitions=competitions)
     
     # Validation des places disponibles
     if placesRequired > int(competition['numberOfPlaces']):
-        flash('Not enough places available!')
+        flash('❌ ERREUR: Pas assez de places disponibles dans cette compétition!')
         return render_template('welcome.html', club=club, competitions=competitions)
     
     # Validation du nombre maximum de places (12 max par club)
     if placesRequired > 12:
-        flash('Cannot book more than 12 places!')
+        flash('❌ ERREUR: Vous ne pouvez pas réserver plus de 12 places!')
         return render_template('welcome.html', club=club, competitions=competitions)
     
     # Mise à jour des données
