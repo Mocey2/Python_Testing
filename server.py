@@ -4,27 +4,41 @@ from flask import Flask,render_template,request,redirect,flash,url_for
 
 
 def loadClubs():
-    with open('clubs.json') as c:
-         listOfClubs = json.load(c)['clubs']
-         return listOfClubs
+    try:
+        with open('clubs.json') as c:
+             listOfClubs = json.load(c)['clubs']
+             return listOfClubs
+    except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
+        print(f"❌ ERREUR: Impossible de charger clubs.json: {e}")
+        return []
 
 
 def loadCompetitions():
-    with open('competitions.json') as comps:
-         listOfCompetitions = json.load(comps)['competitions']
-         return listOfCompetitions
+    try:
+        with open('competitions.json') as comps:
+             listOfCompetitions = json.load(comps)['competitions']
+             return listOfCompetitions
+    except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
+        print(f"❌ ERREUR: Impossible de charger competitions.json: {e}")
+        return []
 
 
 def saveClubs(clubs_data):
     """Sauvegarde les données des clubs dans le fichier JSON"""
-    with open('clubs.json', 'w') as c:
-        json.dump({'clubs': clubs_data}, c, indent=4)
+    try:
+        with open('clubs.json', 'w') as c:
+            json.dump({'clubs': clubs_data}, c, indent=4)
+    except Exception as e:
+        print(f"❌ ERREUR: Impossible de sauvegarder clubs.json: {e}")
 
 
 def saveCompetitions(competitions_data):
     """Sauvegarde les données des compétitions dans le fichier JSON"""
-    with open('competitions.json', 'w') as c:
-        json.dump({'competitions': competitions_data}, c, indent=4)
+    try:
+        with open('competitions.json', 'w') as c:
+            json.dump({'competitions': competitions_data}, c, indent=4)
+    except Exception as e:
+        print(f"❌ ERREUR: Impossible de sauvegarder competitions.json: {e}")
 
 
 def is_competition_past(competition_date):
@@ -39,8 +53,15 @@ def is_competition_past(competition_date):
 app = Flask(__name__)
 app.secret_key = 'something_special'
 
+# Chargement et validation des données
 competitions = loadCompetitions()
 clubs = loadClubs()
+
+# Validation que les données sont chargées
+if not competitions:
+    print("❌ ERREUR CRITIQUE: Aucune compétition chargée!")
+if not clubs:
+    print("❌ ERREUR CRITIQUE: Aucun club chargé!")
 
 @app.route('/')
 def index():
@@ -69,6 +90,11 @@ def showSummary():
 
 @app.route('/book/<competition>/<club>')
 def book(competition,club):
+    # Validation des données d'entrée
+    if not competition or not club:
+        flash("❌ ERREUR: Paramètres manquants")
+        return render_template('index.html')
+    
     try:
         foundClub = [c for c in clubs if c['name'] == club][0]
         foundCompetition = [c for c in competitions if c['name'] == competition][0]
@@ -90,12 +116,26 @@ def book(competition,club):
 
 @app.route('/purchasePlaces',methods=['POST'])
 def purchasePlaces():
+    # Validation des données d'entrée
+    if not request.form.get('competition') or not request.form.get('club') or not request.form.get('places'):
+        flash("❌ ERREUR: Données manquantes dans le formulaire")
+        return render_template('index.html')
+    
     try:
-        competition = [c for c in competitions if c['name'] == request.form['competition']][0]
-        club = [c for c in clubs if c['name'] == request.form['club']][0]
+        competition_name = request.form['competition'].strip()
+        club_name = request.form['club'].strip()
         placesRequired = int(request.form['places'])
+        
+        # Validation que les noms ne sont pas vides
+        if not competition_name or not club_name:
+            flash("❌ ERREUR: Noms de compétition ou club invalides")
+            return render_template('index.html')
+            
+        competition = [c for c in competitions if c['name'] == competition_name][0]
+        club = [c for c in clubs if c['name'] == club_name][0]
+        
     except (IndexError, ValueError, KeyError):
-        flash("Invalid data provided. Please try again.")
+        flash("❌ ERREUR: Données invalides fournies")
         return render_template('index.html')
     
     # Validation du nombre minimum de places
@@ -103,15 +143,30 @@ def purchasePlaces():
         flash('❌ ERREUR: Vous devez saisir un nombre de places supérieur à 0!')
         return render_template('welcome.html', club=club, competitions=competitions)
     
-    # Validation des points du club
-    if placesRequired > int(club['points']):
-        flash('❌ ERREUR: Pas assez de points disponibles!')
+    # Protection contre les nombres trop grands (overflow)
+    if placesRequired > 999999:
+        flash('❌ ERREUR: Nombre de places trop élevé!')
         return render_template('welcome.html', club=club, competitions=competitions)
     
-    # Validation des places disponibles
-    if placesRequired > int(competition['numberOfPlaces']):
-        flash('❌ ERREUR: Pas assez de places disponibles dans cette compétition!')
-        return render_template('welcome.html', club=club, competitions=competitions)
+    # Validation des points du club avec gestion d'erreur
+    try:
+        club_points = int(club['points'])
+        if placesRequired > club_points:
+            flash('❌ ERREUR: Pas assez de points disponibles!')
+            return render_template('welcome.html', club=club, competitions=competitions)
+    except (ValueError, KeyError):
+        flash('❌ ERREUR: Données du club corrompues!')
+        return render_template('index.html')
+    
+    # Validation des places disponibles avec gestion d'erreur
+    try:
+        competition_places = int(competition['numberOfPlaces'])
+        if placesRequired > competition_places:
+            flash('❌ ERREUR: Pas assez de places disponibles dans cette compétition!')
+            return render_template('welcome.html', club=club, competitions=competitions)
+    except (ValueError, KeyError):
+        flash('❌ ERREUR: Données de la compétition corrompues!')
+        return render_template('index.html')
     
     # Validation du nombre maximum de places (12 max par club)
     if placesRequired > 12:
@@ -123,13 +178,26 @@ def purchasePlaces():
         flash('❌ ERREUR: Vous ne pouvez pas réserver pour des compétitions passées!')
         return render_template('welcome.html', club=club, competitions=competitions)
     
-    # Mise à jour des données
-    competition['numberOfPlaces'] = int(competition['numberOfPlaces']) - placesRequired
-    club['points'] = str(int(club['points']) - placesRequired)
-    
-    # Sauvegarde des modifications
-    saveClubs(clubs)
-    saveCompetitions(competitions)
+    # Mise à jour des données avec validation
+    try:
+        new_competition_places = competition_places - placesRequired
+        new_club_points = club_points - placesRequired
+        
+        # Validation que les nouvelles valeurs sont cohérentes
+        if new_competition_places < 0 or new_club_points < 0:
+            flash('❌ ERREUR: Calcul des nouvelles valeurs invalide!')
+            return render_template('welcome.html', club=club, competitions=competitions)
+        
+        competition['numberOfPlaces'] = str(new_competition_places)
+        club['points'] = str(new_club_points)
+        
+        # Sauvegarde des modifications
+        saveClubs(clubs)
+        saveCompetitions(competitions)
+        
+    except Exception as e:
+        flash('❌ ERREUR: Impossible de mettre à jour les données!')
+        return render_template('welcome.html', club=club, competitions=competitions)
     
     flash('Great-booking complete!')
     return render_template('welcome.html', club=club, competitions=competitions)
