@@ -1,16 +1,45 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GUDLFT Registration</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/animations.css') }}">
 </head>
-<body>
-    <h1>Welcome to the GUDLFT Registration Portal!</h1>
-    Please enter your secretary email to continue:
-    <form action="showSummary" method="post">
-        <label for="email">Email:</label>
-        <input type="email" name="email" id=""/>
-        <button type="submit">Enter</button>
-    </form>
+<body class="dynamic-bg">
+    <div class="container">
+        <div class="card fade-in">
+            <div class="header">
+                <h1 class="typewriter">Welcome to the GUDLFT Registration Portal!</h1>
+                <p>Please enter your secretary email to continue</p>
+            </div>
+            
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-error shake">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+            {% endwith %}
+            
+            <form action="showSummary" method="post" class="slide-in-up">
+                <div class="form-group">
+                    <label for="email">Email Address:</label>
+                    <input type="email" name="email" id="email" class="form-control" required 
+                           placeholder="Enter your secretary email">
+                </div>
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary pulse">
+                        Enter Portal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/dynamic.js') }}"></script>
 </body>
 </html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Points Display | GUDLFT</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/animations.css') }}">
+</head>
+<body class="dynamic-bg">
+    <div class="container">
+        <div class="card fade-in">
+            <div class="header">
+                <h1 class="typewriter">Club Points Display</h1>
+                <p>Current points for all registered clubs</p>
+                <div class="nav-links">
+                    <a href="{{url_for('index')}}" class="btn btn-primary">← Back to Home</a>
+                </div>
+            </div>
+
+            <div class="club-list">
+                {% for club in clubs %}
+                <div class="club-card hover-lift stagger-{{ loop.index }}">
+                    <div class="club-name">{{club['name']}}</div>
+                    <div class="club-email">📧 {{club['email']}}</div>
+                    <div class="club-points">💰 {{club['points']}} points</div>
+                    
+                    {% if club['points']|int > 10 %}
+                        <div class="competition-status status-available">High Points</div>
+                    {% elif club['points']|int > 5 %}
+                        <div class="competition-status status-full">Medium Points</div>
+                    {% else %}
+                        <div class="competition-status status-past">Low Points</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="text-center mt-4">
+                <div class="points-display glow">
+                    Total Points Across All Clubs: {{ clubs|sum(attribute='points')|int }}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/dynamic.js') }}"></script>
+</body>
+</html>

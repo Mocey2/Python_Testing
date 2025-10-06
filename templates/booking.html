@@ -1,17 +1,59 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Booking for {{competition['name']}} || GUDLFT</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/animations.css') }}">
 </head>
-<body>
-    <h2>{{competition['name']}}</h2>
-    Places available: {{competition['numberOfPlaces']}}
-    <form action="/purchasePlaces" method="post">
-        <input type="hidden" name="club" value="{{club['name']}}">
-        <input type="hidden" name="competition" value="{{competition['name']}}">
-        <label for="places">How many places?</label><input type="number" name="places" id=""/>
-        <button type="submit">Book</button>
-    </form>
+<body class="dynamic-bg">
+    <div class="container">
+        <div class="card fade-in">
+            <div class="header">
+                <h2 class="bounce-in">{{competition['name']}}</h2>
+                <div class="nav-links">
+                    <a href="{{url_for('showSummary')}}" class="btn btn-secondary">← Back to Competitions</a>
+                </div>
+            </div>
+
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-error shake">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <div class="competition-card glow">
+                <div class="competition-name">{{competition['name']}}</div>
+                <div class="competition-places">🎫 Places available: {{competition['numberOfPlaces']}}</div>
+                <div class="points-display">💰 Your points: {{club['points']}}</div>
+            </div>
+
+            <form action="/purchasePlaces" method="post" class="slide-in-up">
+                <input type="hidden" name="club" value="{{club['name']}}">
+                <input type="hidden" name="competition" value="{{competition['name']}}">
+                
+                <div class="form-group">
+                    <label for="places">How many places would you like to book?</label>
+                    <input type="number" name="places" id="places" class="form-control" 
+                           min="1" max="12" step="1" required 
+                           placeholder="Enter number of places (1-12)">
+                    <small class="text-muted">Maximum 12 places per booking</small>
+                </div>
+                
+                <div class="text-center">
+                    <button type="submit" class="btn btn-success pulse hover-glow">
+                        🎫 Book Places
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/dynamic.js') }}"></script>
 </body>
 </html>

@@ -1,36 +1,70 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Summary | GUDLFT Registration</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/animations.css') }}">
 </head>
-<body>
-        <h2>Welcome, {{club['email']}} </h2><a href="{{url_for('logout')}}">Logout</a>
+<body class="dynamic-bg">
+    <div class="container">
+        <div class="card fade-in">
+            <div class="header">
+                <h2>Welcome, {{club['email']}}</h2>
+                <div class="nav-links">
+                    <a href="{{url_for('points')}}" class="btn btn-secondary">View All Points</a>
+                    <a href="{{url_for('logout')}}" class="btn btn-secondary">Logout</a>
+                </div>
+            </div>
 
-    {% with messages = get_flashed_messages()%}
-    {% if messages %}
-        <ul>
-       {% for message in messages %}
-            <li>{{message}}</li>
-        {% endfor %}
-       </ul>
-    {% endif%}
-    Points available: {{club['points']}}
-    <h3>Competitions:</h3>
-    <ul>
-        {% for comp in competitions%}
-        <li>
-            {{comp['name']}}<br />
-            Date: {{comp['date']}}</br>
-            Number of Places: {{comp['numberOfPlaces']}}
-            {%if comp['numberOfPlaces']|int >0%}
-            <a href="{{ url_for('book',competition=comp['name'],club=club['name']) }}">Book Places</a>
-            {%endif%}
-        </li>
-        <hr />
-        {% endfor %}
-    </ul>
-    {%endwith%}
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    {% if 'Great-booking complete!' in message %}
+                        <div class="alert alert-success bounce-in">
+                            {{ message }}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-error shake">
+                            {{ message }}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+            {% endwith %}
 
+            <div class="points-display glow-success">
+                Points available: {{club['points']}}
+            </div>
+
+            <h3 class="slide-in-left">Available Competitions:</h3>
+            <div class="competition-list">
+                {% for comp in competitions %}
+                <div class="competition-card hover-lift stagger-{{ loop.index }}">
+                    <div class="competition-name">{{comp['name']}}</div>
+                    <div class="competition-date">📅 Date: {{comp['date']}}</div>
+                    <div class="competition-places">🎫 Places: {{comp['numberOfPlaces']}}</div>
+                    
+                    {% if is_competition_past(comp['date']) %}
+                        <div class="competition-status status-past">⚠️ Past Competition</div>
+                    {% elif comp['numberOfPlaces']|int > 0 %}
+                        <div class="competition-status status-available">✅ Available</div>
+                        <div class="mt-3">
+                            <a href="{{ url_for('book',competition=comp['name'],club=club['name']) }}" 
+                               class="btn btn-primary hover-glow">
+                                Book Places
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="competition-status status-full">❌ Full</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/dynamic.js') }}"></script>
 </body>
 </html>
