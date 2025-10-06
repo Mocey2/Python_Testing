@@ -51,9 +51,13 @@ def book(competition,club):
 
 @app.route('/purchasePlaces',methods=['POST'])
 def purchasePlaces():
-    competition = [c for c in competitions if c['name'] == request.form['competition']][0]
-    club = [c for c in clubs if c['name'] == request.form['club']][0]
-    placesRequired = int(request.form['places'])
+    try:
+        competition = [c for c in competitions if c['name'] == request.form['competition']][0]
+        club = [c for c in clubs if c['name'] == request.form['club']][0]
+        placesRequired = int(request.form['places'])
+    except (IndexError, ValueError, KeyError):
+        flash("Invalid data provided. Please try again.")
+        return render_template('index.html')
     
     # Validation des points du club
     if placesRequired > int(club['points']):
@@ -68,6 +72,11 @@ def purchasePlaces():
     # Validation du nombre maximum de places (12 max par club)
     if placesRequired > 12:
         flash('Cannot book more than 12 places!')
+        return render_template('welcome.html', club=club, competitions=competitions)
+    
+    # Validation du nombre minimum de places
+    if placesRequired <= 0:
+        flash('Please enter a valid number of places!')
         return render_template('welcome.html', club=club, competitions=competitions)
     
     # Mise à jour des données
