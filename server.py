@@ -57,6 +57,10 @@ app.secret_key = 'something_special'
 competitions = loadCompetitions()
 clubs = loadClubs()
 
+# Création de dictionnaires pour des recherches O(1) au lieu de O(n)
+competitions_dict = {comp['name']: comp for comp in competitions}
+clubs_dict = {club['name']: club for club in clubs}
+
 # Validation que les données sont chargées
 if not competitions:
     print("❌ ERREUR CRITIQUE: Aucune compétition chargée!")
@@ -96,13 +100,13 @@ def book(competition,club):
         return render_template('index.html')
     
     try:
-        foundClub = [c for c in clubs if c['name'] == club][0]
-        foundCompetition = [c for c in competitions if c['name'] == competition][0]
+        foundClub = clubs_dict[club]
+        foundCompetition = competitions_dict[competition]
         
         # Validation que la compétition n'est pas dans le passé
         if is_competition_past(foundCompetition['date']):
             flash('❌ ERREUR: Cette compétition est dans le passé!')
-            return render_template('welcome.html', club=foundClub, competitions=competitions)
+            return render_template('welcome.html', club=foundClub, competitions=competitions, is_competition_past=is_competition_past)
         
         if foundClub and foundCompetition:
             return render_template('booking.html',club=foundClub,competition=foundCompetition)
@@ -124,15 +128,28 @@ def purchasePlaces():
     try:
         competition_name = request.form['competition'].strip()
         club_name = request.form['club'].strip()
-        placesRequired = int(request.form['places'])
+        placesRequired = float(request.form['places'])
         
-        # Validation que les noms ne sont pas vides
+        # Validation que c'est un nombre entier
+        if placesRequired != int(placesRequired):
+            flash('❌ ERREUR: Le nombre de places doit être un entier!')
+            return render_template('index.html')
+        
+        placesRequired = int(placesRequired)
+        
+        # Validation que les noms ne sont pas vides et sécurisés
         if not competition_name or not club_name:
             flash("❌ ERREUR: Noms de compétition ou club invalides")
             return render_template('index.html')
+        
+        # Validation contre les injections (caractères dangereux)
+        dangerous_chars = ['<', '>', '"', "'", '&', ';', '(', ')', '|', '`', '$']
+        if any(char in competition_name for char in dangerous_chars) or any(char in club_name for char in dangerous_chars):
+            flash("❌ ERREUR: Noms contenant des caractères non autorisés")
+            return render_template('index.html')
             
-        competition = [c for c in competitions if c['name'] == competition_name][0]
-        club = [c for c in clubs if c['name'] == club_name][0]
+        competition = competitions_dict[competition_name]
+        club = clubs_dict[club_name]
         
     except (IndexError, ValueError, KeyError):
         flash("❌ ERREUR: Données invalides fournies")
@@ -197,13 +214,16 @@ def purchasePlaces():
         
     except Exception as e:
         flash('❌ ERREUR: Impossible de mettre à jour les données!')
-        return render_template('welcome.html', club=club, competitions=competitions)
+        return render_template('welcome.html', club=club, competitions=competitions, is_competition_past=is_competition_past)
     
     flash('Great-booking complete!')
-    return render_template('welcome.html', club=club, competitions=competitions)
+    return render_template('welcome.html', club=club, competitions=competitions, is_competition_past=is_competition_past)
 
 
-# TODO: Add route for points display
+@app.route('/points')
+def points():
+    """Affiche les points de tous les clubs"""
+    return render_template('points.html', clubs=clubs)
 
 
 @app.route('/logout')

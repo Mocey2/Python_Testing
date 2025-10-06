@@ -1,0 +1,23 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Points Display | GUDLFT</title>
+</head>
+<body>
+    <h1>Points Display</h1>
+    <a href="{{url_for('index')}}">Back to Home</a>
+    
+    <h2>Club Points:</h2>
+    <ul>
+        {% for club in clubs %}
+        <li>
+            <strong>{{club['name']}}</strong><br />
+            Email: {{club['email']}}<br />
+            Points: {{club['points']}}
+        </li>
+        <hr />
+        {% endfor %}
+    </ul>
+</body>
+</html>
