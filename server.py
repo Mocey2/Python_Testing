@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from flask import Flask,render_template,request,redirect,flash,url_for
 
 
@@ -12,6 +13,27 @@ def loadCompetitions():
     with open('competitions.json') as comps:
          listOfCompetitions = json.load(comps)['competitions']
          return listOfCompetitions
+
+
+def saveClubs(clubs_data):
+    """Sauvegarde les données des clubs dans le fichier JSON"""
+    with open('clubs.json', 'w') as c:
+        json.dump({'clubs': clubs_data}, c, indent=4)
+
+
+def saveCompetitions(competitions_data):
+    """Sauvegarde les données des compétitions dans le fichier JSON"""
+    with open('competitions.json', 'w') as c:
+        json.dump({'competitions': competitions_data}, c, indent=4)
+
+
+def is_competition_past(competition_date):
+    """Vérifie si une compétition est dans le passé"""
+    try:
+        comp_date = datetime.strptime(competition_date, '%Y-%m-%d %H:%M:%S')
+        return comp_date < datetime.now()
+    except ValueError:
+        return False
 
 
 app = Flask(__name__)
@@ -70,9 +92,23 @@ def purchasePlaces():
         flash('Cannot book more than 12 places!')
         return render_template('welcome.html', club=club, competitions=competitions)
     
+    # Validation du nombre minimum de places
+    if placesRequired <= 0:
+        flash('Please enter a valid number of places!')
+        return render_template('welcome.html', club=club, competitions=competitions)
+    
+    # Validation que la compétition n'est pas dans le passé
+    if is_competition_past(competition['date']):
+        flash('Cannot book places for past competitions!')
+        return render_template('welcome.html', club=club, competitions=competitions)
+    
     # Mise à jour des données
     competition['numberOfPlaces'] = int(competition['numberOfPlaces']) - placesRequired
     club['points'] = str(int(club['points']) - placesRequired)
+    
+    # Sauvegarde des modifications
+    saveClubs(clubs)
+    saveCompetitions(competitions)
     
     flash('Great-booking complete!')
     return render_template('welcome.html', club=club, competitions=competitions)
